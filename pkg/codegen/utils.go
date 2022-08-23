@@ -25,7 +25,12 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
-var pathParamRE *regexp.Regexp
+var (
+	pathParamRE    *regexp.Regexp
+	nameNormalizer NameNormalizer = ToCamelCase
+)
+
+type NameNormalizer func(string) string
 
 func init() {
 	pathParamRE = regexp.MustCompile("{[.;?]?([^{}*]+)\\*?}")
@@ -49,6 +54,27 @@ func LowercaseFirstCharacter(str string) string {
 	}
 	runes := []rune(str)
 	runes[0] = unicode.ToLower(runes[0])
+	return string(runes)
+}
+
+// Lowercase the first upper characters in a string for case of abbreviation.
+// This assumes UTF-8, so we have to be careful with unicode, don't treat it as a byte array.
+func LowercaseFirstCharacters(str string) string {
+	if str == "" {
+		return ""
+	}
+
+	runes := []rune(str)
+
+	for i := 0; i < len(runes); i++ {
+		next := i + 1
+		if i != 0 && next < len(runes) && unicode.IsLower(runes[next]) {
+			break
+		}
+
+		runes[i] = unicode.ToLower(runes[i])
+	}
+
 	return string(runes)
 }
 
@@ -251,7 +277,6 @@ func refPathToGoType(refPath string, local bool) (string, error) {
 // ./local/file.yml#/components/parameters/Bar  -> true
 // ./local/file.yml                             -> false
 // The function can be used to check whether RefPathToGoType($ref) is possible.
-//
 func IsGoTypeReference(ref string) bool {
 	return ref != "" && !IsWholeDocumentReference(ref)
 }
@@ -262,7 +287,6 @@ func IsGoTypeReference(ref string) bool {
 // ./local/file.yml                                     -> true
 // http://deepmap.com/schemas/document.json             -> true
 // http://deepmap.com/schemas/document.json#/Foo        -> false
-//
 func IsWholeDocumentReference(ref string) bool {
 	return ref != "" && !strings.ContainsAny(ref, "#")
 }
@@ -270,14 +294,15 @@ func IsWholeDocumentReference(ref string) bool {
 // This function converts a swagger style path URI with parameters to a
 // Echo compatible path URI. We need to replace all of Swagger parameters with
 // ":param". Valid input parameters are:
-//   {param}
-//   {param*}
-//   {.param}
-//   {.param*}
-//   {;param}
-//   {;param*}
-//   {?param}
-//   {?param*}
+//
+//	{param}
+//	{param*}
+//	{.param}
+//	{.param*}
+//	{;param}
+//	{;param*}
+//	{?param}
+//	{?param*}
 func SwaggerUriToEchoUri(uri string) string {
 	return pathParamRE.ReplaceAllString(uri, ":$1")
 }
@@ -285,14 +310,15 @@ func SwaggerUriToEchoUri(uri string) string {
 // This function converts a swagger style path URI with parameters to a
 // Chi compatible path URI. We need to replace all of Swagger parameters with
 // "{param}". Valid input parameters are:
-//   {param}
-//   {param*}
-//   {.param}
-//   {.param*}
-//   {;param}
-//   {;param*}
-//   {?param}
-//   {?param*}
+//
+//	{param}
+//	{param*}
+//	{.param}
+//	{.param*}
+//	{;param}
+//	{;param*}
+//	{?param}
+//	{?param*}
 func SwaggerUriToChiUri(uri string) string {
 	return pathParamRE.ReplaceAllString(uri, "{$1}")
 }
@@ -300,14 +326,15 @@ func SwaggerUriToChiUri(uri string) string {
 // This function converts a swagger style path URI with parameters to a
 // Gin compatible path URI. We need to replace all of Swagger parameters with
 // ":param". Valid input parameters are:
-//   {param}
-//   {param*}
-//   {.param}
-//   {.param*}
-//   {;param}
-//   {;param*}
-//   {?param}
-//   {?param*}
+//
+//	{param}
+//	{param*}
+//	{.param}
+//	{.param*}
+//	{;param}
+//	{;param*}
+//	{?param}
+//	{?param*}
 func SwaggerUriToGinUri(uri string) string {
 	return pathParamRE.ReplaceAllString(uri, ":$1")
 }
@@ -572,7 +599,7 @@ func typeNamePrefix(name string) (prefix string) {
 // SchemaNameToTypeName converts a Schema name to a valid Go type name. It converts to camel case, and makes sure the name is
 // valid in Go
 func SchemaNameToTypeName(name string) string {
-	return typeNamePrefix(name) + ToCamelCase(name)
+	return typeNamePrefix(name) + nameNormalizer(name)
 }
 
 // According to the spec, additionalProperties may be true, false, or a
@@ -596,7 +623,7 @@ func SchemaHasAdditionalProperties(schema *openapi3.Schema) bool {
 // type name.
 func PathToTypeName(path []string) string {
 	for i, p := range path {
-		path[i] = ToCamelCase(p)
+		path[i] = nameNormalizer(p)
 	}
 	return strings.Join(path, "_")
 }

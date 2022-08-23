@@ -108,7 +108,7 @@ func (pd *ParameterDefinition) Explode() bool {
 }
 
 func (pd ParameterDefinition) GoVariableName() string {
-	name := LowercaseFirstCharacter(pd.GoName())
+	name := LowercaseFirstCharacters(pd.GoName())
 	if IsGoKeyword(name) {
 		name = "p" + UppercaseFirstCharacter(name)
 	}
@@ -287,13 +287,13 @@ func (o *OperationDefinition) GetResponseTypeDefinitions() ([]ResponseTypeDefini
 					var typeName string
 					switch {
 					case StringInArray(contentTypeName, contentTypesJSON):
-						typeName = fmt.Sprintf("JSON%s", ToCamelCase(responseName))
+						typeName = fmt.Sprintf("JSON%s", nameNormalizer(responseName))
 					// YAML:
 					case StringInArray(contentTypeName, contentTypesYAML):
-						typeName = fmt.Sprintf("YAML%s", ToCamelCase(responseName))
+						typeName = fmt.Sprintf("YAML%s", nameNormalizer(responseName))
 					// XML:
 					case StringInArray(contentTypeName, contentTypesXML):
-						typeName = fmt.Sprintf("XML%s", ToCamelCase(responseName))
+						typeName = fmt.Sprintf("XML%s", nameNormalizer(responseName))
 					default:
 						continue
 					}
@@ -409,7 +409,7 @@ func OperationDefinitions(swagger *openapi3.T) ([]OperationDefinition, error) {
 				}
 				op.OperationID = op.OperationID
 			} else {
-				op.OperationID = ToCamelCase(op.OperationID)
+				op.OperationID = nameNormalizer(op.OperationID)
 			}
 
 			// These are parameters defined for the specific path method that
@@ -442,7 +442,7 @@ func OperationDefinitions(swagger *openapi3.T) ([]OperationDefinition, error) {
 				HeaderParams: FilterParameterDefinitionByType(allParams, "header"),
 				QueryParams:  FilterParameterDefinitionByType(allParams, "query"),
 				CookieParams: FilterParameterDefinitionByType(allParams, "cookie"),
-				OperationId:  ToCamelCase(op.OperationID),
+				OperationId:  nameNormalizer(op.OperationID),
 				// Replace newlines in summary.
 				Summary:         op.Summary,
 				Method:          opName,
@@ -496,7 +496,7 @@ func generateDefaultOperationID(opName string, requestPath string) (string, erro
 		}
 	}
 
-	return ToCamelCase(operationId), nil
+	return nameNormalizer(operationId), nil
 }
 
 // This function turns the Swagger body definitions into a list of our body

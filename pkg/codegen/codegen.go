@@ -30,6 +30,7 @@ import (
 )
 
 // Embed the templates directory
+//
 //go:embed templates
 var templates embed.FS
 
@@ -107,6 +108,13 @@ func Generate(swagger *openapi3.T, opts Configuration) (string, error) {
 	// if we are provided an override for the response type suffix update it
 	if opts.OutputOptions.ResponseTypeSuffix != "" {
 		responseTypeSuffix = opts.OutputOptions.ResponseTypeSuffix
+	}
+
+	// if we provided an override for name normalizer update it
+	// default normalizer is ToCamelCase
+	nameNormalizer = ToCamelCase
+	if opts.OutputOptions.NameNormalizer != nil {
+		nameNormalizer = opts.OutputOptions.NameNormalizer
 	}
 
 	// This creates the golang templates text package
